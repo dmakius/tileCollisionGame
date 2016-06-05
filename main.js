@@ -1,19 +1,22 @@
 	var canvas , ctx;
 	var ballX = 275, ballY = 270;
 	var ballSpeedX = 5, ballSpeedY = 7;
+	var lives = 3;
+
 
 	const PADDLE_WIDTH = 100;
 	const PADDLE_THICKNESS = 10;
 	const PADDLE_DIST_FROM_EDGE = 60;
 
-	const BRICK_W = 100;
-	const BRICK_H = 50;
+	const BRICK_W = 80;
+	const BRICK_H = 20;
 	const BRICK_GAP = 3;
 	
-	const BRICK_COLOMS = 8;
-	const BRICK_ROWS = 5;
+	const BRICK_COLOMS = 10;
+	const BRICK_ROWS = 15;
 	
 	var brickGrid =  new Array(BRICK_COLOMS*BRICK_ROWS);
+	var bricksLeft = 0;
 
 	var paddleX = 400;
 	var mouseX = 500;
@@ -61,10 +64,14 @@
  		ballX += ballSpeedX;
  		ballY += ballSpeedY;
  		
- 		if(ballX < 0){ballSpeedX *= -1}
- 		if(ballX > canvas.width){ballSpeedX *= -1}
- 		if(ballY < 0){ballSpeedY *= -1}
- 		if(ballY > canvas.height){reset();}
+ 		if(ballX < 0 && ballSpeedX < 0.0){ballSpeedX *= -1}
+ 		if(ballX > canvas.width && ballSpeedX > 0.0){ballSpeedX *= -1}
+ 		if(ballY < 0 && ballSpeedY < 0.0){ballSpeedY *= -1}
+ 		if(ballY > canvas.height){
+ 			lives --;
+ 			reset();
+ 			if(lives == 0){brickReset();}
+ 		}
  	}
  	function ballBrickHandling(){
  		var ballBrickCol = Math.floor(ballX/BRICK_W);
@@ -72,7 +79,8 @@
  		var brickIndexUnderBall = rowColToArrayIndex(ballBrickCol, ballBrickRow);
 		
 		// colorText(mouseBrickX + " , " + mouseBrickY +":" +brickIndexUnderMouse, mouseX,mouseY, 'yellow');
-		
+		var bothTestsFaild = true;
+
 		//the ball 'TOUCHES' a Brick Coordiante
 		if(brickGrid[brickIndexUnderBall]){
 			if(ballBrickCol >= 0 && ballBrickCol < BRICK_COLOMS &&
@@ -88,18 +96,30 @@
 				if(prevBrickCol != ballBrickCol){
 					//get the index for the brick to the left/right of the ball
 					var adjBrickSide = rowColToArrayIndex(prevBrickCol,ballBrickRow); 
-					if(brickGrid[adjBrickSide] == false){ballSpeedX *= -1;}	
+					if(brickGrid[adjBrickSide] == false){
+						ballSpeedX *= -1;
+						bothTestsFaild = false;
+					}	
 				}
 				//the ball moved vertically
 				if(prevBrickRow != ballBrickRow){
 					//get the index for the brick above/below the ball
 					var adjBrickSide = rowColToArrayIndex(ballBrickCol,prevBrickRow);
-					console.log(adjBrickSide);
+					// console.log(adjBrickSide);
 					if(brickGrid[adjBrickSide] == false){
-						ballSpeedY *= -1;}
-				
+						ballSpeedY *= -1;
+						bothTestsFaild = false;
+					}
 				}
+				//the 'armpit case'
+				if(bothTestsFaild){
+					ballSpeedY *= -1;
+					ballSpeedX *= -1;
+				}
+
 				brickGrid[brickIndexUnderBall] = false; //explodes the brick
+				bricksLeft--;
+				// console.log(bricksLeft);
 			}
 		}
  	}
@@ -119,6 +139,8 @@
  			var centerOfPaddleX = paddleX + PADDLE_WIDTH/2;
  			var BallDistFromPaddleCenterX = ballX - centerOfPaddleX;
  			ballSpeedX = BallDistFromPaddleCenterX * 0.35;
+
+ 			if(bricksLeft == 0){brickReset();}
  		}
  	}
 
@@ -133,6 +155,7 @@
  		colorCircle(ballX,ballY,10, 'red');
  		colorRect(paddleX, canvas.height - PADDLE_DIST_FROM_EDGE, PADDLE_WIDTH, PADDLE_THICKNESS,"white");
  		drawBricks();
+ 		colorText('Lives: ' + lives, 650, 575, 'blue');
 	}
  	//helper Functions
  	function rowColToArrayIndex(col,row){
@@ -153,11 +176,18 @@
  		}
 	 }
  	function brickReset(){
- 		for(var i = 0; i < BRICK_COLOMS * BRICK_ROWS; i++){
+ 		bricksLeft = 0;
+ 		lives = 3;
+ 		var i;
+ 		//draw gutter
+ 		for (i = 0; i <  3* BRICK_COLOMS; i++){brickGrid[i] = false} 
+ 		//draw bricks
+ 		for(; i < BRICK_COLOMS * BRICK_ROWS; i++){
  			brickGrid[i] = true;
+ 			bricksLeft++;
  		}
  		//add 'invisible row' for vertical bounce on lowest row 
- 		for(var i = BRICK_COLOMS * BRICK_ROWS; i < ( BRICK_COLOMS * BRICK_ROWS) + BRICK_COLOMS; i ++){
+ 		for(; i < ( BRICK_COLOMS * BRICK_ROWS) + BRICK_COLOMS; i ++){
  			brickGrid[i] = false;
  		}
  	}
@@ -173,5 +203,6 @@
  	}
  	function colorText(showWords, textX,textY, fillColor){
  		ctx.fillStyle = fillColor;
+ 		ctx.font="30px bold Arial";
  		ctx.fillText(showWords, textX,textY);
  	}
